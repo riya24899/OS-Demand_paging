@@ -37,6 +37,10 @@ swap_page(pde_t *pgdir)
 void
 map_address(pde_t *pgdir, uint addr)
 {
+	
+	//uint b=balloc_page(ROOTDEV);
+	//bfree_page(ROOTDEV,b);
+	// cprintf("abc\n");	
 	panic("map_address is not implemented");
 }
 
