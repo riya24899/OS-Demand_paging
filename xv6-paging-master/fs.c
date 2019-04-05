@@ -85,15 +85,39 @@ balloc(uint dev)
 uint
 balloc_page(uint dev)
 {
-	return -1;
+  cprintf("balloc page\n");
+  int b, bi, m;
+  struct buf *bp;
+  begin_op();
+  bp = 0;
+  for(b = 0; b < sb.size; b += BPB){
+    bp = bread(dev, BBLOCK(b, sb));
+    for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+      m = 255;
+     // cprintf("%d\n",bp->data[bi/8]);  
+      if((bp->data[bi/8] & m) == 0){  // Are 8 consecutive block free?
+        bp->data[bi/8] |= m;  // Mark blocks in use.
+ //        cprintf("entered\n");    
+	// cprintf("%d\n",bp->data[bi/8]); 
+
+	      log_write(bp);
+        brelse(bp);
+        for(int i=0; i<8;i++){  //Set blocks to 0
+        bzero(dev, b + bi + (BSIZE*i));
+        }
+        cprintf("allocated \n");
+        end_op();
+        cprintf("%d\n",b+bi);
+        return b + bi;
+      }
+    }
+    brelse(bp);
+  }
+  end_op();
+  panic("balloc: out of blocks");
 }
 
-/* Free disk blocks allocated using balloc_page.
- */
-void
-bfree_page(int dev, uint b)
-{
-}
+
 
 // Free a disk block.
 static void
@@ -111,6 +135,21 @@ bfree(int dev, uint b)
   bp->data[bi/8] &= ~m;
   log_write(bp);
   brelse(bp);
+}
+
+/* Free disk blocks allocated using balloc_page.
+ */
+void
+bfree_page(int dev, uint b)
+{
+  // cprintf("balloc free\n");
+  begin_op();
+  for(uint i=0; i<8;i++){
+   // cprintf("%d\n",b+i);
+   bfree(dev,b+i);
+  }
+  // cprintf("deallocated \n");
+  end_op();
 }
 
 // Inodes.
@@ -687,3 +726,4 @@ nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
 }
+
